@@ -1,64 +1,76 @@
 pipeline {
-    
-    agent any 
+    agent any
     
     environment {
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
     
     stages {
-        
-        stage('Checkout'){
-           steps {
-                git credentialsId: 'f87a34a8-0e09-45e7-b9cf-6dc68feac670', 
-                url: 'https://github.com/andaj004/cicd-end-to-end',
-                branch: 'main'
-           }
-        }
-
-        stage('Build Docker'){
-            steps{
-                script{
-                    sh '''
-                    echo 'Buid Docker Image'
-                    docker build -t andaj/cicd-e2e:${BUILD_NUMBER} .
-                    '''
-                }
+        stage('Checkout GitHub Repo') {
+            steps {
+                git credentialsId: '2df480f3-06f0-47c9-a9f6-e23bf635689a', url: 'https://github.com/andaj004/cicd-end-to-end', branch: 'main'
             }
         }
 
-        stage('Push the artifacts'){
-           steps{
-                script{
-                    sh '''
-                    echo 'Push to Repo'
-                    docker push andaj/cicd-e2e:${BUILD_NUMBER}
-                    '''
-                }
-            }
-        }
-        
-        stage('Checkout K8S manifest SCM'){
+        stage('Build Docker') {
             steps {
-                git credentialsId: '82ffbd98-caf2-483b-a7be-9863cfcf8b44', 
-                url: 'https://github.com/andaj004/cicd-demo-manifests-repo.git',
-                branch: 'main'
-            }
-        }
-        
-        stage('Update K8S manifest & push to Repo'){
-            steps {
-                script{
-                    withCredentials([usernamePassword(credentialsId: '82ffbd98-caf2-483b-a7be-9863cfcf8b44', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                script {
+                    docker.withCredentials([usernamePassword(credentialsId: '340b7d3b-ae7b-4e22-8ed5-264393f66da4', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
                         sh '''
-                        cat deploy.yaml
-                        sed -i '' "s/32/${BUILD_NUMBER}/g" deploy.yaml
-                        cat deploy.yaml
-                        git add deploy.yaml
-                        git commit -m 'Updated the deploy yaml | Jenkins Pipeline'
-                        git remote -v
-                        git push https://github.com/andaj004/cicd-demo-manifests-repo.git HEAD:main
-                        '''                        
+                            echo 'Building Docker Image'
+                            docker build -t andaj/cicd-e2e:${BUILD_NUMBER} .
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    docker.withCredentials([usernamePassword(credentialsId: '340b7d3b-ae7b-4e22-8ed5-264393f66da4', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh '''
+                            echo 'Pushing Docker Image'
+                            docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+                            docker push andaj/cicd-e2e:${BUILD_NUMBER}
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Checkout Kubernetes Manifests') {
+            steps {
+                git credentialsId: '2df480f3-06f0-47c9-a9f6-e23bf635689a', url: 'https://github.com/andaj004/cicd-demo-manifests-repo.git', branch: 'main'
+            }
+        }
+
+        stage('Update Kubernetes Manifest & Push to Repo') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: '2df480f3-06f0-47c9-a9f6-e23bf635689a', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
+                        sh '''
+                            echo 'Updating deploy.yaml with Build Number'
+                            sed -i "s/32/${BUILD_NUMBER}/g" deploy.yaml
+                            git add deploy.yaml
+                            git commit -m 'Updated the deploy yaml | Jenkins Pipeline'
+                            git push https://github.com/andaj004/cicd-demo-manifests-repo.git HEAD:main
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    withCredentials([file(credentialsId: 'k8s-credentials', variable: 'K8S_CONFIG')]) {
+                        sh '''
+                            export KUBECONFIG=$K8S_CONFIG
+                            echo 'Deploying to Kubernetes'
+                            kubectl apply -f deploy.yaml
+                            kubectl rollout status deployment/cicd-e2e-deployment
+                        '''
                     }
                 }
             }
