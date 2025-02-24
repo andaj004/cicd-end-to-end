@@ -41,27 +41,30 @@ pipeline {
             }
         }
 
-        stage('Checkout K8S manifest SCM'){
+        stage('Checkout K8S manifest SCM') {
             steps {
                 git credentialsId: '2df480f3-06f0-47c9-a9f6-e23bf635689a', 
-                url: 'https://github.com/andaj004/cicd-end-to-end.git',
-                branch: 'main'
+                    url: 'https://github.com/andaj004/cicd-end-to-end.git', 
+                    branch: 'main'
             }
         }
         
-        stage('Update K8S manifest & push to Repo'){
+        stage('Update K8S manifest & push to Repo') {
             steps {
-                script{
+                script {
                     withCredentials([usernamePassword(credentialsId: '2df480f3-06f0-47c9-a9f6-e23bf635689a', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
                         sh '''
-                        cat deploy.yaml
-                        sed -i '' "s/32/${BUILD_NUMBER}/g" deploy.yaml
-                        cat deploy.yaml
-                        git add deploy.yaml
+                        echo "Current directory: $(pwd)"  # Debugging current working directory
+                        ls -l  # List all files in the current directory
+                        ls -l deploy/  # List the contents of deploy folder to confirm the file's existence
+                        cat deploy/deploy.yaml  # Check the file content
+                        sed -i "s/32/${BUILD_NUMBER}/g" deploy/deploy.yaml  # Replace the version with build number
+                        cat deploy/deploy.yaml  # Verify the file after modification
+                        git add deploy/deploy.yaml
                         git commit -m 'Updated the deploy yaml | Jenkins Pipeline'
                         git remote -v
                         git push https://github.com/andaj004/cicd-end-to-end.git HEAD:main
-                        '''                        
+                        '''
                     }
                 }
             }
