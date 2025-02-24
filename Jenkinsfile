@@ -17,10 +17,12 @@ pipeline {
         stage('Build Docker') {
             steps {
                 script {
-                            echo 'Building Docker Image'
-                            docker build -t andaj/cicd-e2e:${BUILD_NUMBER} .
-                            docker images  // Check if the image is created successfully
-                        '''
+                    echo 'Building Docker Image'
+                    // Using the Docker plugin to build the image
+                    def customImage = docker.build("andaj/cicd-e2e:${BUILD_NUMBER}")
+                    // Verifying that the image is built successfully
+                    customImage.inside {
+                        sh 'docker images'  // List the created images inside the container
                     }
                 }
             }
@@ -30,8 +32,8 @@ pipeline {
             steps {
                 script {
                     docker.withCredentials([usernamePassword(credentialsId: '340b7d3b-ae7b-4e22-8ed5-264393f66da4', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        echo 'Pushing Docker Image'
                         sh '''
-                            echo 'Pushing Docker Image'
                             docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
                             docker push andaj/cicd-e2e:${BUILD_NUMBER}
                             docker images  // Confirm if the image is there before pushing
