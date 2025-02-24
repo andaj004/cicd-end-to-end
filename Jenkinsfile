@@ -65,6 +65,12 @@ pipeline {
                             git add deploy/deploy.yaml
                             git commit -m 'Updated the deploy yaml | Jenkins Pipeline'
                             git remote -v
+                            
+                            # Set up Git credentials
+                            git config --global user.name "$GIT_USERNAME"
+                            git config --global user.email "${GIT_USERNAME}@gmail.com"
+                            
+                            # Push to GitHub using HTTPS and stored credentials
                             git push https://$GIT_USERNAME:$GIT_PASSWORD@github.com/andaj004/cicd-end-to-end.git HEAD:main
                         '''
                     }
