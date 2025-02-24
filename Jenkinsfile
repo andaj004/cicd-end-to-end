@@ -41,28 +41,27 @@ pipeline {
             }
         }
 
-        stage('Update Kubernetes Manifest') {
+        stage('Checkout K8S manifest SCM'){
             steps {
-                script {
-                    withCredentials([usernamePassword(
-                        credentialsId: '2df480f3-06f0-47c9-a9f6-e23bf635689a',
-                        usernameVariable: 'GIT_USER',
-                        passwordVariable: 'GIT_PASS'
-                    )]) {
-                        echo "Updating ${DEPLOY_PATH}"
-                        // Updating the Kubernetes deployment manifest with the new image tag
-                        sh """
-                            sed -i "s/andaj\\/cicd-e2e:[0-9]*/andaj\\/cicd-e2e:${IMAGE_TAG}/g" ${DEPLOY_PATH}
-                            git add ${DEPLOY_PATH}
-                            git commit -m "Update image to ${IMAGE_TAG}"
-                            
-                            # Configure git user details
-                            git config user.name "${GIT_USER}"
-                            git config user.email "${GIT_USER}@gmail.com"
-                            
-                            # Push the changes to GitHub
-                            git push https://github.com/andaj004/cicd-end-to-end.git HEAD:main
-                        """
+                git credentialsId: '2df480f3-06f0-47c9-a9f6-e23bf635689a', 
+                url: 'https://github.com/andaj004/cicd-end-to-end.git',
+                branch: 'main'
+            }
+        }
+        
+        stage('Update K8S manifest & push to Repo'){
+            steps {
+                script{
+                    withCredentials([usernamePassword(credentialsId: '2df480f3-06f0-47c9-a9f6-e23bf635689a', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                        sh '''
+                        cat deploy.yaml
+                        sed -i '' "s/32/${BUILD_NUMBER}/g" deploy.yaml
+                        cat deploy.yaml
+                        git add deploy.yaml
+                        git commit -m 'Updated the deploy yaml | Jenkins Pipeline'
+                        git remote -v
+                        git push https://github.com/andaj004/cicd-end-to-end.git HEAD:main
+                        '''                        
                     }
                 }
             }
