@@ -3,19 +3,19 @@ kind: Deployment
 metadata:
   name: todo-app
   labels:
-    app: nginx
+    app: todo-app
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: nginx
+      app: todo-app
   template:
     metadata:
       labels:
-        app: nginx
+        app: todo-app
     spec:
       containers:
       - name: todo
-        image: abhishekf5/todo-app:v1
+        image: andaj/cicd-e2e:26  # This will be dynamically replaced by Jenkins
         ports:
         - containerPort: 8000
