@@ -64,7 +64,7 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    withCredentials([file(credentialsId: 'k8s-credentials', variable: 'K8S_CONFIG')]) {
+                    withCredentials([file(credentialsId: 'minikube-jenkins', variable: 'K8S_CONFIG')]) {
                         sh """
                             export KUBECONFIG=${K8S_CONFIG}
                             echo 'Deploying Deployment'
