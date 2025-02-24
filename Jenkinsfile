@@ -3,14 +3,17 @@ pipeline {
     
     environment {
         IMAGE_TAG = "${BUILD_NUMBER}"
+        MANIFEST_PATH = "deploy/deploy.yaml"  // Path to your manifest
     }
     
     stages {
         stage('Checkout GitHub Repo') {
             steps {
-                git credentialsId: '2df480f3-06f0-47c9-a9f6-e23bf635689a', url: 'https://github.com/andaj004/cicd-end-to-end', branch: 'main'
+                git credentialsId: '2df480f3-06f0-47c9-a9f6-e23bf635689a', 
+                    url: 'https://github.com/andaj004/cicd-end-to-end', 
+                    branch: 'main'
                 echo 'Checked out GitHub Repo'
-                sh 'ls -l'  // List files in the workspace to confirm the repo content
+                sh 'ls -l deploy/'  // Verify manifests directory
             }
         }
 
@@ -18,53 +21,40 @@ pipeline {
             steps {
                 script {
                     echo 'Building Docker Image'
-                    // Running the Docker build directly on the EC2 instance
                     sh """
                         docker build -t andaj/cicd-e2e:${IMAGE_TAG} .
-                        docker images  # List the created images to verify build
+                        docker images
                     """
                 }
             }
         }
 
         stage('Push to Docker Hub') {
-    steps {
-        script {
-            def imageExists = sh(script: "docker images -q andaj/cicd-e2e:${IMAGE_TAG}", returnStdout: true).trim()
-            if (imageExists) {
-                docker.withRegistry('https://index.docker.io/v1/', '340b7d3b-ae7b-4e22-8ed5-264393f66da4') {
-                    echo 'Pushing Docker Image'
-                    sh "docker push andaj/cicd-e2e:${IMAGE_TAG}"
-                }
-            } else {
-                error "Docker image andaj/cicd-e2e:${IMAGE_TAG} not found!"
-            }
-        }
-    }
-}
-
-
-        stage('Checkout Kubernetes Manifests') {
-            steps {
-                git credentialsId: '2df480f3-06f0-47c9-a9f6-e23bf635689a', url: 'https://github.com/andaj004/cicd-demo-manifests-repo.git', branch: 'main'
-                echo 'Checked out Kubernetes Manifests Repo'
-                sh 'ls -l'  // List files in the workspace to confirm the presence of deploy.yaml
-            }
-        }
-
-        stage('Update Kubernetes Manifest & Push to Repo') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: '2df480f3-06f0-47c9-a9f6-e23bf635689a', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
-                        sh '''
-                            echo 'Updating deploy.yaml with Build Number'
-                            cat deploy.yaml  # Check the original content of the file
-                            sed -i "s/32/${BUILD_NUMBER}/g" deploy.yaml
-                            cat deploy.yaml  # Verify the change after sed
-                            git add deploy.yaml
-                            git commit -m "Updated the deploy yaml | Jenkins Pipeline"
-                            git push https://$GIT_USERNAME:$GIT_PASSWORD@github.com/andaj004/cicd-demo-manifests-repo.git HEAD:main
-                        '''
+                    docker.withRegistry('https://index.docker.io/v1/', '340b7d3b-ae7b-4e22-8ed5-264393f66da4') {
+                        echo 'Pushing Docker Image'
+                        sh "docker push andaj/cicd-e2e:${IMAGE_TAG}"
+                    }
+                }
+            }
+        }
+
+        stage('Update Kubernetes Manifest') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(
+                        credentialsId: '2df480f3-06f0-47c9-a9f6-e23bf635689a',
+                        usernameVariable: 'GIT_USER',
+                        passwordVariable: 'GIT_PASS'
+                    )]) {
+                        sh """
+                            echo 'Updating ${MANIFEST_PATH}'
+                            sed -i "s/andaj\\/cicd-e2e:[0-9]*/andaj\\/cicd-e2e:${IMAGE_TAG}/g" ${MANIFEST_PATH}
+                            git add ${MANIFEST_PATH}
+                            git commit -m "Update image to ${IMAGE_TAG}"
+                            git push https://${GIT_USER}:${GIT_PASS}@github.com/andaj004/cicd-end-to-end.git HEAD:main
+                        """
                     }
                 }
             }
@@ -74,13 +64,12 @@ pipeline {
             steps {
                 script {
                     withCredentials([file(credentialsId: 'k8s-credentials', variable: 'K8S_CONFIG')]) {
-                        sh '''
-                            export KUBECONFIG=$K8S_CONFIG
-                            echo 'Deploying to Kubernetes'
-                            kubectl apply -f deploy.yaml
+                        sh """
+                            export KUBECONFIG=${K8S_CONFIG}
+                            kubectl apply -f ${MANIFEST_PATH}
                             kubectl rollout status deployment/cicd-e2e-deployment
-                            kubectl get deployments  # Verify if the deployment is updated
-                        '''
+                            kubectl get pods
+                        """
                     }
                 }
             }
