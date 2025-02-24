@@ -17,8 +17,6 @@ pipeline {
         stage('Build Docker') {
             steps {
                 script {
-                    docker.withCredentials([usernamePassword(credentialsId: '340b7d3b-ae7b-4e22-8ed5-264393f66da4', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
-                        sh '''
                             echo 'Building Docker Image'
                             docker build -t andaj/cicd-e2e:${BUILD_NUMBER} .
                             docker images  // Check if the image is created successfully
