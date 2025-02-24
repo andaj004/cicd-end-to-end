@@ -28,19 +28,21 @@ pipeline {
         }
 
         stage('Push to Docker Hub') {
-            steps {
-                script {
-                    docker.withCredentials([usernamePassword(credentialsId: '340b7d3b-ae7b-4e22-8ed5-264393f66da4', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
-                        echo 'Pushing Docker Image'
-                        sh '''
-                            docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
-                            docker push andaj/cicd-e2e:$IMAGE_TAG
-                            docker images  # Confirm if the image is there before pushing
-                        '''
-                    }
+    steps {
+        script {
+            def imageExists = sh(script: "docker images -q andaj/cicd-e2e:${IMAGE_TAG}", returnStdout: true).trim()
+            if (imageExists) {
+                docker.withRegistry('https://index.docker.io/v1/', '340b7d3b-ae7b-4e22-8ed5-264393f66da4') {
+                    echo 'Pushing Docker Image'
+                    sh "docker push andaj/cicd-e2e:${IMAGE_TAG}"
                 }
+            } else {
+                error "Docker image andaj/cicd-e2e:${IMAGE_TAG} not found!"
             }
         }
+    }
+}
+
 
         stage('Checkout Kubernetes Manifests') {
             steps {
