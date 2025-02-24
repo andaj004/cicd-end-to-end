@@ -3,7 +3,8 @@ pipeline {
     
     environment {
         IMAGE_TAG = "${BUILD_NUMBER}"
-        MANIFEST_PATH = "deploy/deploy.yaml"  // Path to your manifest
+        DEPLOY_PATH = "deploy/deploy.yaml"  // Path to your deployment manifest
+        SERVICE_PATH = "deploy/service.yaml"  // Path to your service manifest
     }
     
     stages {
@@ -49,9 +50,9 @@ pipeline {
                         passwordVariable: 'GIT_PASS'
                     )]) {
                         sh """
-                            echo 'Updating ${MANIFEST_PATH}'
-                            sed -i "s/andaj\\/cicd-e2e:[0-9]*/andaj\\/cicd-e2e:${IMAGE_TAG}/g" ${MANIFEST_PATH}
-                            git add ${MANIFEST_PATH}
+                            echo 'Updating ${DEPLOY_PATH}'
+                            sed -i "s/andaj\\/cicd-e2e:[0-9]*/andaj\\/cicd-e2e:${IMAGE_TAG}/g" ${DEPLOY_PATH}
+                            git add ${DEPLOY_PATH}
                             git commit -m "Update image to ${IMAGE_TAG}"
                             git push https://${GIT_USER}:${GIT_PASS}@github.com/andaj004/cicd-end-to-end.git HEAD:main
                         """
@@ -66,9 +67,13 @@ pipeline {
                     withCredentials([file(credentialsId: 'k8s-credentials', variable: 'K8S_CONFIG')]) {
                         sh """
                             export KUBECONFIG=${K8S_CONFIG}
-                            kubectl apply -f ${MANIFEST_PATH}
-                            kubectl rollout status deployment/cicd-e2e-deployment
+                            echo 'Deploying Deployment'
+                            kubectl apply -f ${DEPLOY_PATH}
+                            echo 'Deploying Service'
+                            kubectl apply -f ${SERVICE_PATH}
+                            kubectl rollout status deployment/todo-app
                             kubectl get pods
+                            kubectl get svc
                         """
                     }
                 }
