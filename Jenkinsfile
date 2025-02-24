@@ -14,16 +14,15 @@ pipeline {
             }
         }
 
-        stage('Build Docker') {
+        stage('Build Docker Image') {
             steps {
                 script {
                     echo 'Building Docker Image'
-                    // Using the Docker plugin to build the image
-                    def customImage = docker.build("andaj/cicd-e2e:${BUILD_NUMBER}")
-                    // Verifying that the image is built successfully
-                    customImage.inside {
-                        sh 'docker images'  // List the created images inside the container
-                    }
+                    // Running the Docker build directly on the EC2 instance
+                    sh """
+                        docker build -t andaj/cicd-e2e:${IMAGE_TAG} .
+                        docker images  // List the created images to verify build
+                    """
                 }
             }
         }
@@ -35,7 +34,7 @@ pipeline {
                         echo 'Pushing Docker Image'
                         sh '''
                             docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
-                            docker push andaj/cicd-e2e:${BUILD_NUMBER}
+                            docker push andaj/cicd-e2e:${IMAGE_TAG}
                             docker images  // Confirm if the image is there before pushing
                         '''
                     }
