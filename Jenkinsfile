@@ -49,16 +49,18 @@ pipeline {
                         usernameVariable: 'GIT_USER',
                         passwordVariable: 'GIT_PASS'
                     )]) {
-                        // Update the Kubernetes manifest with the new image tag
+                        echo "Updating ${DEPLOY_PATH}"
+                        // Updating the Kubernetes deployment manifest with the new image tag
                         sh """
-                            echo 'Updating ${DEPLOY_PATH}'
                             sed -i "s/andaj\\/cicd-e2e:[0-9]*/andaj\\/cicd-e2e:${IMAGE_TAG}/g" ${DEPLOY_PATH}
                             git add ${DEPLOY_PATH}
                             git commit -m "Update image to ${IMAGE_TAG}"
-
-                            // Push the changes to GitHub
+                            
+                            # Configure git user details
                             git config user.name "${GIT_USER}"
-                            git config user.email "${GIT_USER}@gmail.com"  // Ensure a valid email for commits
+                            git config user.email "${GIT_USER}@gmail.com"
+                            
+                            # Push the changes to GitHub
                             git push https://github.com/andaj004/cicd-end-to-end.git HEAD:main
                         """
                     }
