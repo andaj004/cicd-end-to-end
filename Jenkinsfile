@@ -3,8 +3,8 @@ pipeline {
     
     environment {
         IMAGE_TAG = "${BUILD_NUMBER}"
-        DEPLOY_PATH = "deploy/deploy.yaml"  // Path to your deployment manifest
-        SERVICE_PATH = "deploy/service.yaml"  // Path to your service manifest
+        DEPLOY_PATH = "deploy/deploy.yaml"
+        SERVICE_PATH = "deploy/service.yaml"
     }
     
     stages {
@@ -14,7 +14,7 @@ pipeline {
                     url: 'https://github.com/andaj004/cicd-end-to-end.git', 
                     branch: 'main'
                 echo 'Checked out GitHub Repo'
-                sh 'ls -l deploy/'  // Verify manifests directory
+                sh 'ls -l deploy/'
             }
         }
 
@@ -54,12 +54,12 @@ pipeline {
                 script {
                     withCredentials([usernamePassword(credentialsId: '2df480f3-06f0-47c9-a9f6-e23bf635689a', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
                         sh '''
-                        echo "Current directory: $(pwd)"  # Debugging current working directory
-                        ls -l  # List all files in the current directory
-                        ls -l deploy/  # List the contents of deploy folder to confirm the file's existence
-                        cat deploy/deploy.yaml  # Check the file content
-                        sed -i "s/32/${BUILD_NUMBER}/g" deploy/deploy.yaml  # Replace the version with build number
-                        cat deploy/deploy.yaml  # Verify the file after modification
+                        echo "Current directory: $(pwd)"  
+                        ls -l  
+                        ls -l deploy/  
+                        cat deploy/deploy.yaml  
+                        sed -i "s/andaj\\/cicd-e2e:[0-9]*/andaj\\/cicd-e2e:${IMAGE_TAG}/g" deploy/deploy.yaml  
+                        cat deploy/deploy.yaml  
                         git add deploy/deploy.yaml
                         git commit -m 'Updated the deploy yaml | Jenkins Pipeline'
                         git remote -v
