@@ -82,6 +82,10 @@ pipeline {
             steps {
                 script {
                     withCredentials([file(credentialsId: 'minikube-jenkins', variable: 'K8S_CONFIG')]) {
+                        // Debug: Output the kubeconfig content to verify it's correct
+                        sh "cat ${K8S_CONFIG}"
+                        
+                        // Set the KUBECONFIG environment variable and run the deployment
                         sh """
                             export KUBECONFIG=${K8S_CONFIG}
                             echo 'Deploying Deployment'
