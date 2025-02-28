@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
       - name: todo
-        image: andaj/cicd-e2e:45  # This will be dynamically replaced by Jenkins
+        image: andaj/cicd-e2e:46  # This will be dynamically replaced by Jenkins
         ports:
         - containerPort: 8000
