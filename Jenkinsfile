@@ -81,13 +81,13 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    withCredentials([file(credentialsId: 'minikube-jenkins', variable: 'K8S_CONFIG')]) {
+                    withCredentials([file(credentialsId: 'minikube-jenkins', variable: 'minikube-jenkins')]) {
                         // Debug: Output the kubeconfig content to verify it's correct
-                        sh "cat ${K8S_CONFIG}"
+                        sh "cat ${minikube-jenkins}"
                         
                         // Set the KUBECONFIG environment variable and run the deployment
                         sh """
-                            export KUBECONFIG=${K8S_CONFIG}
+                            export KUBECONFIG=${minikube-jenkins}
                             echo 'Deploying Deployment'
                             kubectl apply -f ${DEPLOY_PATH}
                             echo 'Deploying Service'
