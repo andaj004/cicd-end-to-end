@@ -23,7 +23,7 @@ pipeline {
                 script {
                     echo 'Building Docker Image'
                     sh """
-                        docker build -t andaj/cicd-e2e:${IMAGE_TAG} .
+                        docker build -t andaj/cicd-e2e:${IMAGE_TAG} . 
                         docker images
                     """
                 }
@@ -66,6 +66,7 @@ pipeline {
                             git commit -m 'Updated the deploy yaml | Jenkins Pipeline'
                             git remote -v
                             
+
                             # Set up Git credentials
                             git config --global user.name "$GIT_USERNAME"
                             git config --global user.email "${GIT_USERNAME}@gmail.com"
@@ -81,13 +82,14 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    withCredentials([file(credentialsId: 'minikube-jenkins', variable: 'minikube-jenkins')]) {
+                    // Use a valid variable name without hyphen
+                    withCredentials([file(credentialsId: 'minikube-jenkins', variable: 'MINIKUBE_JENKINS')]) {
                         // Debug: Output the kubeconfig content to verify it's correct
-                        sh "cat ${minikube-jenkins}"
+                        sh "cat ${MINIKUBE_JENKINS}"
                         
                         // Set the KUBECONFIG environment variable and run the deployment
                         sh """
-                            export KUBECONFIG=${minikube-jenkins}
+                            export KUBECONFIG=${MINIKUBE_JENKINS}
                             echo 'Deploying Deployment'
                             kubectl apply -f ${DEPLOY_PATH}
                             echo 'Deploying Service'
